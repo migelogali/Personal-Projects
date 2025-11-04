@@ -1,26 +1,28 @@
 import pandas as pd
 
-# Load (or scrape) the table
+# Load the table
 df = pd.read_html("https://www.basketball-reference.com/leaders/fg3_yearly.html")[0]
 
 # Only keep necessary columns (until i get rid of Lg later)
 df = df[['Season', '3P', 'Lg']]
 
-# Drop rows where 'Season' is missing or not a string
-df = df[df['Season'].apply(lambda x: isinstance(x, str))]
+# Drop rows where 'Season' is missing or not a string (gets rid of duplicates)
+df = df[df['Season'].apply(type) == str]
 
 # Convert 'Season' to season-end year
-def season_to_end_year(season_str):
+def season_end_year(season_str):
     start, end = season_str.split('-')
     start = int(start)
     end = int(end)
-    if end < 50:
+    # Any end < 75 is in the 2000s, otherwise it’s in the 1900s (as per where my statistics start)
+    if end < 75:
         end += 2000
     else:
         end += 1900
     return end
 
-df['Season_End_Year'] = df['Season'].apply(season_to_end_year)
+# call of my helper function to get season end year
+df['Season_End_Year'] = df['Season'].apply(season_end_year)
 
 # Keep only NBA seasons
 # ABA entries are labeled 'ABA' in the 'Lg' column
@@ -33,7 +35,9 @@ df.rename(columns={
 
 # Keep only the columns you care about
 df = df[['Season_End_Year', 'Most_3PM']]
+
+# Don't include this season since it hasn't completed yet
 df_final = df[df['Season_End_Year'] <= 2025]
 
-# Save to CSV
+# Save to CSV, without the index in the first column
 df_final.to_csv("season_leader_3p_made.csv", index=False)
